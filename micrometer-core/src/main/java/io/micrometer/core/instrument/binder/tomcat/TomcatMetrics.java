@@ -44,6 +44,7 @@ public class TomcatMetrics implements MeterBinder {
 
     private final MBeanServer mBeanServer;
     private final Iterable<Tag> tags;
+    private final List<NotificationListener> listeners = new ArrayList<>();
 
     public TomcatMetrics(@Nullable Manager manager, Iterable<Tag> tags) {
         this(manager, tags, getMBeanServer());
@@ -78,6 +79,12 @@ public class TomcatMetrics implements MeterBinder {
         registerCacheMetrics(registry);
         registerThreadPoolMetrics(registry);
         registerSessionMetrics(registry);
+    }
+
+    public void shutdown() {
+        for (NotificationListener listener : listeners) {
+            mBeanServer.removeNotificationListener(MBeanServerDelegate.DELEGATE_NAME, listener);
+        }
     }
 
     private void registerSessionMetrics(MeterRegistry registry) {
@@ -232,6 +239,7 @@ public class TomcatMetrics implements MeterBinder {
         };
 
         try {
+            listeners.add(notificationListener);
             mBeanServer.addNotificationListener(MBeanServerDelegate.DELEGATE_NAME, notificationListener, notificationFilter, null);
         } catch (InstanceNotFoundException e) {
             // should never happen
